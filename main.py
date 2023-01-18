@@ -15,9 +15,13 @@ async def new_client_connected(client_socket, path):
 
 
     while True:
-        new_message = await client_socket.recv()
-        print("Client sent: ", new_message)
-        await send_message(new_message)
+        try:    
+            new_message = await client_socket.recv()
+            print("Client sent: ", new_message)
+            await send_message(new_message)
+        except websockets.ConnectionClosedOK:
+            all_clients.remove(client_socket)
+            break
 
 async def start_server():
     print("Server started")
