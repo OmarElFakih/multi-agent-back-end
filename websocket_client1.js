@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
 
     websocketClient.onopen = function(){
+        websocketClient.send("client1")
+        
         sendMessageButton.onclick = function(){
             websocketClient.send(messageInput.value);
         }

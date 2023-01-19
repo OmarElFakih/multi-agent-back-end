@@ -12,13 +12,14 @@ async def send_message(message: str):
 async def new_client_connected(client_socket, path):
     print("new client connected")
     all_clients.append(client_socket)
+    clientId = await client_socket.recv()
 
 
     while True:
         try:    
             new_message = await client_socket.recv()
-            print("Client sent: ", new_message)
-            await send_message(new_message)
+            print(f"{clientId} sent")
+            await send_message(f"{clientId}: {new_message}")
         except websockets.ConnectionClosedOK:
             all_clients.remove(client_socket)
             break
