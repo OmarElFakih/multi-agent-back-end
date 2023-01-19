@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function(){
-    const websocketClient = new WebSocket("ws://localhost:12345");
+    const websocketClient = new WebSocket("ws://localhost:8080/ws");
 
     const messageContainer = document.querySelector("#message_container");
     const messageInput = document.querySelector("[name=message_input]");
@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 
     websocketClient.onopen = function(){
-        websocketClient.send("client3")
+        websocketClient.send("client2")
         
         sendMessageButton.onclick = function(){
             websocketClient.send(messageInput.value);
