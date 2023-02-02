@@ -1,6 +1,6 @@
 import os
 import aiohttp
-from whatsapp_client import WhatsAppWrapper
+from app.whatsapp_client import WhatsAppWrapper
 from dotenv import load_dotenv
 
 from aiohttp import web
@@ -9,6 +9,8 @@ routes = web.RouteTableDef()
 load_dotenv()
 all_clients = []
 wsClient = WhatsAppWrapper()
+nOfAgents = 0
+
 
 VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN")
 
@@ -58,12 +60,12 @@ async def websocket_handler(request):
 
     ws = web.WebSocketResponse()
     await ws.prepare(request)
-    id = ""
+    global nOfAgents
 
-    async for msg in ws:
-        if msg.type == aiohttp.WSMsgType.TEXT:
-            id = msg.data
-            break
+    id = nOfAgents
+
+    nOfAgents += 1
+    
 
     all_clients.append(ws)
 
@@ -73,7 +75,7 @@ async def websocket_handler(request):
             #   await ws.close()
             #else:
                 #await ws.send_str(f'{id}: {msg.data}')
-                await send_all(f'{id}: {msg.data}')
+                await send_all(f'Agent{id}: {msg.data}')
                 wsClient.send_message(msg.data, "584123722632")
         elif msg.type == aiohttp.WSMsgType.ERROR:
             print('ws connection closed with exception %s' %
@@ -83,7 +85,7 @@ async def websocket_handler(request):
     all_clients.remove(ws)
     return ws
 
-
-app = web.Application()
-app.add_routes(routes)
-web.run_app(app)
+if __name__ == "__main__" :
+    app = web.Application()
+    app.add_routes(routes)
+    web.run_app(app)
