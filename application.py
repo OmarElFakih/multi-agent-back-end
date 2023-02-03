@@ -4,6 +4,7 @@ from app.whatsapp_client import WhatsAppWrapper
 from dotenv import load_dotenv
 
 from aiohttp import web
+#from aio.aplication import Application
 routes = web.RouteTableDef()
 
 load_dotenv()
@@ -14,6 +15,10 @@ nOfAgents = 0
 
 VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN")
 
+# application = web.Application()
+# application.add_routes(routes)
+
+
 async def send_all(message: str):
     for client in all_clients:
         await client.send_str(message)
@@ -21,6 +26,7 @@ async def send_all(message: str):
 @routes.get('/')
 async def hello(request):
     return web.Response(text="Hello, world")
+
 
 @routes.post('/post-all-chats')
 async def post(request):
@@ -85,7 +91,8 @@ async def websocket_handler(request):
     all_clients.remove(ws)
     return ws
 
-if __name__ == "__main__" :
-    app = web.Application()
-    app.add_routes(routes)
-    web.run_app(app)
+application = web.Application()
+application.add_routes(routes)
+
+if __name__ == "__main__":
+    web.run_app(application)
