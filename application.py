@@ -15,8 +15,12 @@ nOfAgents = 0
 
 VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN")
 
-# application = web.Application()
-# application.add_routes(routes)
+class Application(web.Application):
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
+        return web.run_app(self)
 
 
 async def send_all(message: str):
@@ -91,8 +95,8 @@ async def websocket_handler(request):
     all_clients.remove(ws)
     return ws
 
-application = web.Application()
+application = Application()
 application.add_routes(routes)
 
 if __name__ == "__main__":
-    web.run_app(application)
+    application.run()
