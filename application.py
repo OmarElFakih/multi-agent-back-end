@@ -20,7 +20,7 @@ class Application(web.Application):
         super().__init__()
 
     def run(self):
-        return web.run_app(self)
+        return web.run_app(self, port=8000)
 
 
 async def send_all(message: str):
