@@ -1,5 +1,6 @@
 import os
 import requests
+from whatsapp.whatsapp_data_types import Whatsapp_msg_data
 from dotenv import load_dotenv
 
 import json
@@ -60,8 +61,8 @@ class WhatsAppWrapper:
         body_data = body["entry"][0]["changes"][0]["value"]
 
         if "messages" in body_data:
-            data = {
-                "business_number": body_data["metadata"]["display_phone_number"],
+            data: Whatsapp_msg_data = {
+                "business_phone_number": body_data["metadata"]["display_phone_number"],
                 "business_number_id": body_data["metadata"]["phone_number_id"],
                 "client_number": body_data["contacts"][0]["wa_id"],
                 "client_profile_name": body_data["contacts"][0]["profile"]["name"],

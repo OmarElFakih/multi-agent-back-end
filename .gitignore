@@ -130,6 +130,7 @@ dmypy.json
 
 # specific files
 json_structure.py
+tokens.txt
 virt
 
 #extensions
