@@ -3,6 +3,7 @@ from typing import TypedDict, List
 
 class Message_doc(TypedDict):
     sender: str
+    sender_is_business: bool
     body: str
     sent_on: str
     tag: str

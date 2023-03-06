@@ -30,7 +30,6 @@ class MongoWrapper:
                  "status": {"$not": re.compile("terminated")}   
                 }
 
-        #query["status"] = {"$not": re.compile("terminated")} if (agent_role == "admin") else "on hold"
 
         found_conversations =  self.conversations.find(query)
         
@@ -41,7 +40,7 @@ class MongoWrapper:
             return filtered_conversations
 
 
-    def insert_conversation(self, data: Whatsapp_msg_data, sender: str):
+    def insert_conversation(self, data: Whatsapp_msg_data, sender: str, sender_is_business: bool):
 
         
 
@@ -55,6 +54,7 @@ class MongoWrapper:
             "date": data["timestamp"],
             "messages": [{
                             "sender": sender,
+                            "sender_is_business": sender_is_business,
                             "body": data["message"],
                             "sent_on": data["timestamp"],
                             "tag": "default"

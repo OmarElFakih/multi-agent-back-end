@@ -1,4 +1,5 @@
 import os
+import time
 import aiohttp
 from whatsapp.whatsapp_client import WhatsAppWrapper
 from whatsapp.whatsapp_data_types import Whatsapp_msg_data
@@ -75,7 +76,7 @@ async def webhook_notification(request):
         if converstaion == None:
             
             await send_agents(message_data)
-            mgClient.insert_conversation(message_data, message_data["client_profile_name"])
+            mgClient.insert_conversation(message_data, message_data["client_profile_name"], False)
 
         else: 
             await send_agents(message_data, converstaion["assigned_agent"])
@@ -83,6 +84,7 @@ async def webhook_notification(request):
 
             doc_msg: Message_doc = {
                 "sender": message_data["client_profile_name"],
+                "sender_is_business": False,
                 "body": message_data["message"],
                 "sent_on": message_data["timestamp"],
                 "tag": "default"
@@ -101,19 +103,18 @@ async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
-    global nOfAgents
     
     agent = {
-        "id": f"Agent {nOfAgents}",
+        "id": "",
         "connection": ws,
-        "business_number_id": "",
-        "role": "agent"
+        "role": "",
+        "business_number_id": ""    
     }
 
     all_agents.append(agent)
     print("client connected")
 
-    nOfAgents += 1
+    
 
     async for msg in ws:
         if msg.type == aiohttp.WSMsgType.TEXT:
@@ -124,26 +125,32 @@ async def websocket_handler(request):
                 
                 if data["type"] == "connection": 
                     print("connection")
-                    agent["business_number_id"] = data["business_number_id"] #get business number from first message
+                    agent["id"] = data["id"]
+                    agent["role"] = data["role"]
+                    agent["business_number_id"] = data["business_number_id"] #get user data from first message
+
+                    print(agent)
 
                     #look for active conversations and send messages to recently logged agent
                     active_conversations = mgClient.find_active_conversations(data["business_number_id"], agent["role"], agent["id"])
-                    print(active_conversations)
+                    
 
                     #send each message from active conversations to recently logged in agent
                     for conversation in active_conversations:
                         for message in conversation["messages"]:
-                            stored_message: Whatsapp_msg_data = {
+                            stored_message = {
                                 "business_phone_number": conversation["business_phone_number"],
                                 "business_number_id": conversation["business_phone_number_id"],
                                 "client_number": conversation["client_number"],
                                 "client_profile_name": conversation["client_name"],
                                 "message": message["body"],
-                                "timestamp": message["sent_on"]
+                                "timestamp": message["sent_on"],
+                                "sender_is_business": message["sender_is_business"]
                             }
 
                             print(stored_message)
                             await agent["connection"].send_str(json.dumps(stored_message))
+                            time.sleep(.2)
 
 
 
@@ -154,6 +161,7 @@ async def websocket_handler(request):
                     #create message dictionary for storage
                     doc_msg: Message_doc = {
                         "sender": agent["id"],
+                        "sender_is_business": True,
                         "body": data["message"],
                         "sent_on": data["timestamp"],
                         "tag": "default"
@@ -163,7 +171,7 @@ async def websocket_handler(request):
                     if(target_conversation["assigned_agent"] == ""):
                         print(f"no assigned agent in conversation, {agent['id']} will be assigned")
                         wsClient.send_message(data["message"], data["client_number"], agent["business_number_id"])
-                        mgClient.insert_message(doc_msg, data["client_number"], agent["business_number_id"], assigned_agent=agent["id"], status="ongoing")
+                        mgClient.insert_message(doc_msg, data["client_number"], agent["business_number_id"], agent["id"], "ongoing")
 
                     #if there is an agent assigned to the target conversation, check if said agent is the one sending the message
                     if(target_conversation["assigned_agent"] == agent["id"]):
