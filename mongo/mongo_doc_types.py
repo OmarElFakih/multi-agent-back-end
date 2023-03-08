@@ -9,6 +9,12 @@ class Message_doc(TypedDict):
     tag: str
 
 
+class Notification_doc(TypedDict):
+    type: str
+    sent_on: str
+    body: str
+
+
 class Converstaion_doc(TypedDict):
     business_phone_number: str
     business_number_id: str
@@ -17,4 +23,4 @@ class Converstaion_doc(TypedDict):
     assigned_agent: str
     status: str
     date: str
-    messages: List[Message_doc]
+    messages: List

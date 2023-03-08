@@ -2,9 +2,9 @@ import os
 import time
 import aiohttp
 from whatsapp.whatsapp_client import WhatsAppWrapper
-from whatsapp.whatsapp_data_types import Whatsapp_msg_data
+# from whatsapp.whatsapp_data_types import Whatsapp_msg_data
 from mongo.mongo_client import MongoWrapper
-from mongo.mongo_doc_types import Message_doc
+from mongo.mongo_doc_types import Message_doc, Notification_doc
 from dotenv import load_dotenv
 import json
 
@@ -14,7 +14,6 @@ routes = web.RouteTableDef()
 
 load_dotenv()
 all_agents = []
-nOfAgents = 0
 
 
 
@@ -171,7 +170,8 @@ async def websocket_handler(request):
                     if(target_conversation["assigned_agent"] == ""):
                         print(f"no assigned agent in conversation, {agent['id']} will be assigned")
                         wsClient.send_message(data["message"], data["client_number"], agent["business_number_id"])
-                        mgClient.insert_message(doc_msg, data["client_number"], agent["business_number_id"], agent["id"], "ongoing")
+                        mgClient.insert_message(doc_msg, data["client_number"], agent["business_number_id"])
+                        mgClient.update_values(data["client_number"], agent["business_number_id"], {"status": "ongoing", "assigned_agent": agent["id"]})
 
                     #if there is an agent assigned to the target conversation, check if said agent is the one sending the message
                     if(target_conversation["assigned_agent"] == agent["id"]):
@@ -184,6 +184,30 @@ async def websocket_handler(request):
                         print(f"{agent['id']} has no permission to answer this conversation")
 
 
+                if data["type"] == "notification":
+                    noti_conversation = mgClient.find_conversation(data["client_number"], agent["business_number_id"])
+                    if (noti_conversation["assigned_agent"] == agent["id"]):
+                        noti_doc: Notification_doc = {
+                            "type": data["noti_type"],
+                            "sent_on": data["timestamp"],
+                            "body": data["body"]
+                        }
+
+                        mgClient.insert_message(noti_doc, data["client_number"], agent["business_number_id"])
+
+                        if(data["noti_type"] == "termination"):
+                            mgClient.update_values(data["client_number"], agent["business_number_id"], {"status": "terminated"})
+                            
+                            noti_data = {
+                                "isNoti": True,
+                                "body": "Conversation Terminated",
+                                "client_number": data["client_number"]
+                            }
+
+                            await agent["connection"].send_str(json.dumps(noti_data))
+
+
+
         elif msg.type == aiohttp.WSMsgType.ERROR:
             print('ws connection closed with exception %s' %
                   ws.exception())
@@ -191,6 +215,8 @@ async def websocket_handler(request):
     print('websocket connection closed')
     all_agents.remove(agent)
     return ws
+
+
 
 application = Application()
 application.add_routes(routes)

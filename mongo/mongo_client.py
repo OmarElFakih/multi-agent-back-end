@@ -1,5 +1,5 @@
 from pymongo import mongo_client
-from mongo.mongo_doc_types import Message_doc, Converstaion_doc
+from mongo.mongo_doc_types import Converstaion_doc
 from whatsapp.whatsapp_data_types import Whatsapp_msg_data
 import re
 
@@ -65,32 +65,32 @@ class MongoWrapper:
         self.conversations.insert_one(new_conversation)
 
 
-    def insert_message(self, message : Message_doc, client_number: str, business_phone_number_id: str, assigned_agent="", status=""):
+    def insert_message(self, message, client_number: str, business_phone_number_id: str):
         query = {"client_number": client_number,
                  "business_phone_number_id": business_phone_number_id,
                  "status": {"$not": re.compile("terminated")}    
                 }
         
-        new_values = {"$push": {"messages": message},
-                      "$set": {}
-                    }
+        new_values = {"$push": {"messages": message}}
 
-        if(status != ""):
-            new_values["$set"]["status"] = status
+        # if(status != ""):
+        #     new_values["$set"]["status"] = status
 
-        if(assigned_agent != ""):
-            new_values["$set"]["assigned_agent"] = assigned_agent
+        # if(assigned_agent != ""):
+        #     new_values["$set"]["assigned_agent"] = assigned_agent
             
         self.conversations.update_one(query, new_values)
 
 
-    def update_status(self, client_number: str, business_phone_number_id: str, status: str):
+    def update_values(self, client_number: str, business_phone_number_id: str, value_dict: dict):
         query = {"client_number": client_number,
                  "business_phone_number_id": business_phone_number_id,
                  "status": {"$not": re.compile("terminated")}    
                 }
         
-        self.conversations.update_one(query, {"status": status})
+        new_values = {"$set" : value_dict}
+        
+        self.conversations.update_one(query, new_values)
     
 
 
