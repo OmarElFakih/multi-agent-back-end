@@ -1,6 +1,6 @@
 from pymongo import mongo_client
 from mongo.mongo_doc_types import Converstaion_doc
-from whatsapp.whatsapp_data_types import Whatsapp_msg_data
+from whatsapp.whatsapp_data_types import Whatsapp_msg
 import re
 
 
@@ -40,9 +40,22 @@ class MongoWrapper:
             return filtered_conversations
 
 
-    def insert_conversation(self, data: Whatsapp_msg_data, sender: str, sender_is_business: bool):
+    def insert_conversation(self, data: dict, sender: str, sender_is_business: bool):
 
-        
+        message = {
+            "sender": sender,
+            "sender_is_business": sender_is_business,
+            "sent_on": data["timestamp"],
+            "tag": "default"
+        }
+
+        if (data["msg_type"] == "txt"):
+            message["body"] = data["message"]
+
+        if (data["msg_type"] == "img"):
+            message["caption"] = data["caption"]
+            message["image_url"] = data["image_url"]
+
 
         new_conversation: Converstaion_doc = {
             "business_phone_number": data["business_phone_number"],
@@ -52,13 +65,7 @@ class MongoWrapper:
             "assigned_agent": "",
             "status": "on hold",
             "date": data["timestamp"],
-            "messages": [{
-                            "sender": sender,
-                            "sender_is_business": sender_is_business,
-                            "body": data["message"],
-                            "sent_on": data["timestamp"],
-                            "tag": "default"
-                        }] 
+            "messages": [message] 
             
             }
         

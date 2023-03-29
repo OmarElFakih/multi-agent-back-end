@@ -4,7 +4,7 @@ import aiohttp
 from whatsapp.whatsapp_client import WhatsAppWrapper
 # from whatsapp.whatsapp_data_types import Whatsapp_msg_data
 from mongo.mongo_client import MongoWrapper
-from mongo.mongo_doc_types import Message_doc, Notification_doc
+from mongo.mongo_doc_types import Txt_msg_doc, Img_msg_doc, Notification_doc
 from dotenv import load_dotenv
 import json
 
@@ -44,13 +44,6 @@ async def hello(request):
     return web.Response(text="Hello, world")
 
 
-@routes.post('/post-all-chats')
-async def post(request):
-    data = await request.json()
-    print(data["message"])
-    await send_agents(f"HTTP: {data['message']}")
-    return web.Response(text=data["message"])
-
 @routes.get('/webhook')
 async def verify_webhook(request):
     data = request.query["hub.verify_token"]
@@ -66,28 +59,45 @@ async def verify_webhook(request):
 @routes.post('/webhook')
 async def webhook_notification(request):
     data = await request.json()
+
+    print(f"data is {data}")
+    
     message_data = wsClient.request_data(data)
 
+    doc_msg = {}
+
     if(message_data != "not a message"):
-        print(message_data)
+        print(f"message data is: {message_data}")
         converstaion = mgClient.find_conversation(message_data["client_number"], message_data["business_number_id"])
 
         if converstaion == None:
             
             await send_agents(message_data)
-            mgClient.insert_conversation(message_data, message_data["client_profile_name"], False)
+            mgClient.insert_conversation(message_data, message_data["client_profile_name"], sender_is_business=False)
 
         else: 
             await send_agents(message_data, converstaion["assigned_agent"])
             
+            if(message_data["msg_type"] == "txt"):
 
-            doc_msg: Message_doc = {
-                "sender": message_data["client_profile_name"],
-                "sender_is_business": False,
-                "body": message_data["message"],
-                "sent_on": message_data["timestamp"],
-                "tag": "default"
-            }
+                doc_msg: Txt_msg_doc = {
+                    "sender": message_data["client_profile_name"],
+                    "sender_is_business": False,
+                    "body": message_data["message"],
+                    "sent_on": message_data["timestamp"],
+                    "tag": "default"
+                }
+            
+            if(message_data["msg_type"] == "img"):
+                
+                doc_msg: Img_msg_doc = {
+                    "sender": message_data["client_profile_name"],
+                    "sender_is_business": False,
+                    "caption": message_data["caption"],
+                    "image_url": message_data["image_url"],
+                    "sent_on": message_data["timestamp"],
+                    "tag": "default"
+                }
 
             mgClient.insert_message(doc_msg, message_data["client_number"], message_data["business_number_id"])
 
@@ -142,10 +152,17 @@ async def websocket_handler(request):
                                 "business_number_id": conversation["business_phone_number_id"],
                                 "client_number": conversation["client_number"],
                                 "client_profile_name": conversation["client_name"],
-                                "message": message["body"],
+                                #"message": message["body"],
                                 "timestamp": message["sent_on"],
                                 "sender_is_business": message["sender_is_business"]
                             }
+
+                            if("body" in message):
+                                stored_message["message"] = message["body"]
+                            
+                            if("image_url" in message):
+                                stored_message["caption"] = message["caption"]
+                                stored_message["image_url"] = message["image_url"]
 
                             print(stored_message)
                             await agent["connection"].send_str(json.dumps(stored_message))
@@ -158,7 +175,7 @@ async def websocket_handler(request):
                     target_conversation = mgClient.find_conversation(data["client_number"], agent["business_number_id"])
 
                     #create message dictionary for storage
-                    doc_msg: Message_doc = {
+                    doc_msg: Txt_msg_doc = {
                         "sender": agent["id"],
                         "sender_is_business": True,
                         "body": data["message"],
@@ -199,7 +216,7 @@ async def websocket_handler(request):
                             mgClient.update_values(data["client_number"], agent["business_number_id"], {"status": "terminated"})
                             
                             noti_data = {
-                                "isNoti": True,
+                                "type": "notification",
                                 "body": "Conversation Terminated",
                                 "client_number": data["client_number"]
                             }
