@@ -15,6 +15,9 @@ class WhatsAppWrapper:
     API_URL = "https://graph.facebook.com/v15.0/"
     API_TOKEN = os.environ.get("WHATSAPP_API_TOKEN")
     NUMBER_ID = os.environ.get("WHATSAPP_NUMBER_ID")
+
+    ACCESS_KEY= os.environ.get("ACCESS_KEY")
+    SECRET_KEY= os.environ.get("SECRET_KEY")
     S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
 
     def __init__(self):
@@ -23,7 +26,10 @@ class WhatsAppWrapper:
             "Content-Type": "application/json",
         }
         
-        self.s3Client = boto3.client('s3')
+        self.s3Client = boto3.client('s3', 
+                                    aws_access_key_id=self.ACCESS_KEY,
+                                    aws_secret_access_key=self.SECRET_KEY
+                                     )
 
     def send_template_message(self, template_name, language_code, phone_number):
         payload = json.dumps({

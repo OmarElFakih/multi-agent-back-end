@@ -41,7 +41,7 @@ async def send_agents(message, agent_id=""):
 
 @routes.get('/')
 async def hello(request):
-    return web.Response(text="envio de imagenes implementado")
+    return web.Response(text="envio de imagenes implementado (credenciales configuradas de manera alternativa)")
 
 
 @routes.get('/webhook')
@@ -142,7 +142,7 @@ async def websocket_handler(request):
 
                             print(stored_message)
                             await agent["connection"].send_str(json.dumps(stored_message))
-                            time.sleep(.2)
+                            time.sleep(.5)
 
 
 
