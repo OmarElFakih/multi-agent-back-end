@@ -42,19 +42,23 @@ class MongoWrapper:
 
     def insert_conversation(self, data: dict, sender: str, sender_is_business: bool):
 
-        message = {
-            "sender": sender,
-            "sender_is_business": sender_is_business,
-            "sent_on": data["timestamp"],
-            "tag": "default"
-        }
+        # message = {
+        #     "sender": sender,
+        #     "sender_is_business": sender_is_business,
+        #     "sent_on": data["timestamp"],
+        #     "tag": "default"
+        # }
 
-        if (data["msg_type"] == "txt"):
-            message["body"] = data["message"]
 
-        if (data["msg_type"] == "img"):
-            message["caption"] = data["caption"]
-            message["image_url"] = data["image_url"]
+
+        # if (data["msg_type"] == "txt"):
+        #     message["body"] = data["message"]
+
+        # if (data["msg_type"] == "img"):
+        #     message["caption"] = data["caption"]
+        #     message["image_url"] = data["image_url"]
+
+        message = self.build_msg_doc(data, sender, sender_is_business)
 
 
         new_conversation: Converstaion_doc = {
@@ -72,11 +76,17 @@ class MongoWrapper:
         self.conversations.insert_one(new_conversation)
 
 
-    def insert_message(self, message, client_number: str, business_phone_number_id: str):
-        query = {"client_number": client_number,
-                 "business_phone_number_id": business_phone_number_id,
-                 "status": {"$not": re.compile("terminated")}    
+    def insert_message(self, data: dict, sender: str, sender_is_business: bool, conversation_id):
+        # query = {"client_number": client_number,
+        #          "business_phone_number_id": business_phone_number_id,
+        #          "status": {"$not": re.compile("terminated")}    
+        #         }
+
+        query = {"_id": conversation_id,
+                 "status": {"$not": re.compile("terminated")}
                 }
+        
+        message = self.build_msg_doc(data, sender, sender_is_business)
         
         new_values = {"$push": {"messages": message}}
 
@@ -98,6 +108,26 @@ class MongoWrapper:
         new_values = {"$set" : value_dict}
         
         self.conversations.update_one(query, new_values)
+
+
+    def build_msg_doc(self, message_data: dict, sender: str, sender_is_business: bool):
+        msg_doc = {
+            "sender": sender,
+            "sender_is_business": sender_is_business,
+            "sent_on": message_data["timestamp"],
+            "tag": "default"
+        }
+
+        if (message_data["msg_type"] == "txt"):
+            msg_doc["body"] = message_data["message"]
+            msg_doc["msg_type"] = "txt"
+
+        if (message_data["msg_type"] == "img"):
+            msg_doc["caption"] = message_data["caption"]
+            msg_doc["image_url"] = message_data["image_url"]
+            msg_doc["msg_type"] = "img"
+
+        return msg_doc
     
 
 

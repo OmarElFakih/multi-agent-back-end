@@ -41,18 +41,19 @@ async def send_agents(message, agent_id=""):
 
 @routes.get('/')
 async def hello(request):
-    return web.Response(text="Hello, world")
+    return web.Response(text="envio de imagenes implementado")
 
 
 @routes.get('/webhook')
 async def verify_webhook(request):
-    data = request.query["hub.verify_token"]
-    print(request.query)
+    # data = request.query["hub.verify_token"]
+    # print(request.query)
     
-    print(f"request: {data}  enviroment: {VERIFY_TOKEN}")
+    # print(f"request: {data}  enviroment: {VERIFY_TOKEN}")
 
     if request.query["hub.verify_token"] == VERIFY_TOKEN:
         return web.Response(text=request.query["hub.challenge"])
+    
     return "Authentication failed. Invalid Token."
 
 
@@ -64,10 +65,9 @@ async def webhook_notification(request):
     
     message_data = wsClient.request_data(data)
 
-    doc_msg = {}
-
     if(message_data != "not a message"):
         print(f"message data is: {message_data}")
+
         converstaion = mgClient.find_conversation(message_data["client_number"], message_data["business_number_id"])
 
         if converstaion == None:
@@ -77,31 +77,7 @@ async def webhook_notification(request):
 
         else: 
             await send_agents(message_data, converstaion["assigned_agent"])
-            
-            if(message_data["msg_type"] == "txt"):
-
-                doc_msg: Txt_msg_doc = {
-                    "sender": message_data["client_profile_name"],
-                    "sender_is_business": False,
-                    "body": message_data["message"],
-                    "sent_on": message_data["timestamp"],
-                    "tag": "default"
-                }
-            
-            if(message_data["msg_type"] == "img"):
-                
-                doc_msg: Img_msg_doc = {
-                    "sender": message_data["client_profile_name"],
-                    "sender_is_business": False,
-                    "caption": message_data["caption"],
-                    "image_url": message_data["image_url"],
-                    "sent_on": message_data["timestamp"],
-                    "tag": "default"
-                }
-
-            mgClient.insert_message(doc_msg, message_data["client_number"], message_data["business_number_id"])
-
-
+            mgClient.insert_message(message_data, message_data["client_profile_name"], sender_is_business=False, conversation_id=converstaion["_id"])
     
     return web.Response(text="success")
 
@@ -130,7 +106,7 @@ async def websocket_handler(request):
                 data = json.loads(msg.data)
                 
                 
-                print(data)
+                # print(data)
                 
                 if data["type"] == "connection": 
                     print("connection")
@@ -152,9 +128,9 @@ async def websocket_handler(request):
                                 "business_number_id": conversation["business_phone_number_id"],
                                 "client_number": conversation["client_number"],
                                 "client_profile_name": conversation["client_name"],
-                                #"message": message["body"],
                                 "timestamp": message["sent_on"],
-                                "sender_is_business": message["sender_is_business"]
+                                "sender_is_business": message["sender_is_business"],
+                                "msg_type": message["msg_type"]
                             }
 
                             if("body" in message):
@@ -175,26 +151,24 @@ async def websocket_handler(request):
                     target_conversation = mgClient.find_conversation(data["client_number"], agent["business_number_id"])
 
                     #create message dictionary for storage
-                    doc_msg: Txt_msg_doc = {
-                        "sender": agent["id"],
-                        "sender_is_business": True,
-                        "body": data["message"],
-                        "sent_on": data["timestamp"],
-                        "tag": "default"
+                    msg_data = {
+                        "msg_type": "txt",
+                        "message": data["message"],
+                        "timestamp": data["timestamp"],
                     }
 
                     #check if there is no agent assigned to the target conversation
                     if(target_conversation["assigned_agent"] == ""):
                         print(f"no assigned agent in conversation, {agent['id']} will be assigned")
                         wsClient.send_message(data["message"], data["client_number"], agent["business_number_id"])
-                        mgClient.insert_message(doc_msg, data["client_number"], agent["business_number_id"])
+                        mgClient.insert_message(msg_data, agent["id"], sender_is_business=True, conversation_id=target_conversation["_id"])
                         mgClient.update_values(data["client_number"], agent["business_number_id"], {"status": "ongoing", "assigned_agent": agent["id"]})
 
                     #if there is an agent assigned to the target conversation, check if said agent is the one sending the message
                     if(target_conversation["assigned_agent"] == agent["id"]):
                         print(f" {agent['id']} is the assigned agent to this conversation")
                         wsClient.send_message(data["message"], data["client_number"], agent["business_number_id"])
-                        mgClient.insert_message(doc_msg, data["client_number"], agent["business_number_id"])
+                        mgClient.insert_message(msg_data, agent["id"], sender_is_business=True, conversation_id=target_conversation["_id"])
 
                     #prevent message from being delivered if the assigned agent is different to the one trying to send the message
                     if(target_conversation["assigned_agent"] != "" and target_conversation["assigned_agent"] != agent["id"]):
@@ -210,7 +184,7 @@ async def websocket_handler(request):
                             "body": data["body"]
                         }
 
-                        mgClient.insert_message(noti_doc, data["client_number"], agent["business_number_id"])
+                        # mgClient.insert_message(noti_doc, data["client_number"], agent["business_number_id"])
 
                         if(data["noti_type"] == "termination"):
                             mgClient.update_values(data["client_number"], agent["business_number_id"], {"status": "terminated"})
@@ -218,7 +192,8 @@ async def websocket_handler(request):
                             noti_data = {
                                 "type": "notification",
                                 "body": "Conversation Terminated",
-                                "client_number": data["client_number"]
+                                "client_number": data["client_number"],
+                                "isNoti": True
                             }
 
                             await agent["connection"].send_str(json.dumps(noti_data))

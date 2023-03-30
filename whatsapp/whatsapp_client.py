@@ -98,7 +98,13 @@ class WhatsAppWrapper:
 
                 if os.path.exists(f"{media_id}.jpg"):
                     os.remove(f"{media_id}.jpg")
+
+                caption = ""
                 
+                if("caption" in body_data["messages"][0]["image"]):
+                    caption = body_data["messages"][0]["image"]["caption"]
+
+
                 #data: Whatsapp_img_msg = {
                 data = {
                     "msg_type": "img",
@@ -106,7 +112,7 @@ class WhatsAppWrapper:
                     "business_number_id": body_data["metadata"]["phone_number_id"],
                     "client_number": body_data["contacts"][0]["wa_id"],
                     "client_profile_name": body_data["contacts"][0]["profile"]["name"],
-                    "caption" : body_data["messages"][0]["image"]["caption"],
+                    "caption" : caption,
                     "image_url": image_url,
                     "timestamp": body_data["messages"][0]["timestamp"]
 
