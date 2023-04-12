@@ -2,6 +2,7 @@ from pymongo import mongo_client
 from mongo.mongo_doc_types import Converstaion_doc
 from whatsapp.whatsapp_data_types import Whatsapp_msg
 import re
+import datetime
 
 
 
@@ -14,6 +15,39 @@ class MongoWrapper:
         self.db = self.client.get_database(database_name)
         self.conversations = self.db.conversations
         
+    def string_date(self, datetime_obj: datetime.datetime):
+        return datetime_obj.strftime("%d-%m-%Y")
+
+    def get_conversations_by_day(self, business_phone_number_id: str):
+        tomorrow = datetime.datetime.today() + datetime.timedelta(days=1)
+        docs = self.conversations.find({"business_phone_number_id" : business_phone_number_id})
+        doc_arr = []
+
+        for document in docs:
+            date = datetime.datetime.fromtimestamp(int(document["date"]))
+            doc_arr.append(date)
+
+        date_pointer = doc_arr[0]
+        date_data = []
+
+        # print(self.string_date(date_pointer))
+        # print(self.string_date(tomorrow))
+
+        while self.string_date(date_pointer) != self.string_date(tomorrow):
+            data_obj = {
+                "id": self.string_date(date_pointer),
+                "conversations": 0
+            }
+
+            for doc in doc_arr:
+                if self.string_date(doc) == self.string_date(date_pointer):
+                    data_obj["conversations"] += 1
+
+            date_data.append(data_obj)
+
+            date_pointer += datetime.timedelta(days = 1)
+
+        return date_data
 
 
     def find_conversation(self, client_number: str, business_phone_number_id: str):
@@ -23,6 +57,7 @@ class MongoWrapper:
                 }
         
         return self.conversations.find_one(query)
+    
     
     def find_active_conversations(self, business_phone_number_id: str, agent_role, agent_id):
         query = {

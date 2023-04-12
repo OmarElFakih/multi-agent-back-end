@@ -46,10 +46,6 @@ async def hello(request):
 
 @routes.get('/webhook')
 async def verify_webhook(request):
-    # data = request.query["hub.verify_token"]
-    # print(request.query)
-    
-    # print(f"request: {data}  enviroment: {VERIFY_TOKEN}")
 
     if request.query["hub.verify_token"] == VERIFY_TOKEN:
         return web.Response(text=request.query["hub.challenge"])
@@ -80,6 +76,16 @@ async def webhook_notification(request):
             mgClient.insert_message(message_data, message_data["client_profile_name"], sender_is_business=False, conversation_id=converstaion["_id"])
     
     return web.Response(text="success")
+
+@routes.get('/metrics')
+async def get_metrics(request):
+    req_data = await request.json()
+    metrics_data = mgClient.get_conversations_by_day(req_data["business_phone_number_id"])
+
+    print(metrics_data)
+    return web.Response(text=json.dumps(metrics_data))
+    #return web.Response(text=req_data["business_phone_number_id"])
+
 
 
 @routes.get('/ws')
