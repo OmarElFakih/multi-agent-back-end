@@ -13,41 +13,71 @@ class MongoWrapper:
     def __init__(self, connection_string, database_name):
         self.client = mongo_client.MongoClient(connection_string)
         self.db = self.client.get_database(database_name)
-        self.conversations = self.db.conversations
+        #self.conversations = self.db.conversations
+        self.conversations = self.db.testing_conversations
         
     def string_date(self, datetime_obj: datetime.datetime):
         return datetime_obj.strftime("%d-%m-%Y")
 
-    def get_conversations_by_day(self, business_phone_number_id: str):
+    def get_metrics(self, business_phone_number_id: str):
         tomorrow = datetime.datetime.today() + datetime.timedelta(days=1)
-        docs = self.conversations.find({"business_phone_number_id" : business_phone_number_id})
-        doc_arr = []
+        docs = self.conversations.find({"business_phone_number_id" : business_phone_number_id, "status": "terminated"})
+        #doc_arr = []
 
-        for document in docs:
-            date = datetime.datetime.fromtimestamp(int(document["date"]))
-            doc_arr.append(date)
+        # for document in docs:
+        #     date = datetime.datetime.fromtimestamp(int(document["date"]))
+        #     doc_arr.append(date)
 
-        date_pointer = doc_arr[0]
-        date_data = []
+        date_pointer = datetime.datetime.fromtimestamp(int(docs[0]["date"]))
+        total_conv_data = []
+        total_agent_data = []
+
 
         # print(self.string_date(date_pointer))
         # print(self.string_date(tomorrow))
 
         while self.string_date(date_pointer) != self.string_date(tomorrow):
-            data_obj = {
+            conv_data = {
                 "id": self.string_date(date_pointer),
                 "conversations": 0
             }
 
-            for doc in doc_arr:
-                if self.string_date(doc) == self.string_date(date_pointer):
-                    data_obj["conversations"] += 1
+            #current agent names are for Demo pourposes, Agent names must be aquired from external DB onn future iterations
+            agent_data = {
+                "id": self.string_date(date_pointer),
+                "agents": {
+                    "Agent01": 0,
+                    "Agent02": 0,
+                    "Admin01": 0,
+                    "Admin02": 0
+                }
+            }
 
-            date_data.append(data_obj)
+            for document in docs:
+                
+                
+                
+                doc_date = datetime.datetime.fromtimestamp(int(document["date"]))
+
+                if self.string_date(doc_date) == self.string_date(date_pointer):
+                    conv_data["conversations"] += 1
+
+                    agent_data["agents"][document["assigned_agent"]] += 1
+
+                
+
+            total_conv_data.append(conv_data)
+            total_agent_data.append(agent_data)
 
             date_pointer += datetime.timedelta(days = 1)
 
-        return date_data
+        metrics = {
+            "num_of_conversations": total_conv_data,
+            "agent_performance": total_agent_data
+        }
+
+        return metrics
+    
 
 
     def find_conversation(self, client_number: str, business_phone_number_id: str):
@@ -77,22 +107,6 @@ class MongoWrapper:
 
     def insert_conversation(self, data: dict, sender: str, sender_is_business: bool):
 
-        # message = {
-        #     "sender": sender,
-        #     "sender_is_business": sender_is_business,
-        #     "sent_on": data["timestamp"],
-        #     "tag": "default"
-        # }
-
-
-
-        # if (data["msg_type"] == "txt"):
-        #     message["body"] = data["message"]
-
-        # if (data["msg_type"] == "img"):
-        #     message["caption"] = data["caption"]
-        #     message["image_url"] = data["image_url"]
-
         message = self.build_msg_doc(data, sender, sender_is_business)
 
 
@@ -101,7 +115,7 @@ class MongoWrapper:
             "business_phone_number_id": data["business_number_id"],
             "client_name": data["client_profile_name"],
             "client_number": data["client_number"],
-            "assigned_agent": "",
+            "assigned_agent": "none",
             "status": "on hold",
             "date": data["timestamp"],
             "messages": [message] 
