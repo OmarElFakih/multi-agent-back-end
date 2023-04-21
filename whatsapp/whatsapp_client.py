@@ -15,6 +15,9 @@ class WhatsAppWrapper:
     API_URL = "https://graph.facebook.com/v15.0/"
     API_TOKEN = os.environ.get("WHATSAPP_API_TOKEN")
     NUMBER_ID = os.environ.get("WHATSAPP_NUMBER_ID")
+
+    ACCESS_KEY= os.environ.get("ACCESS_KEY")
+    SECRET_KEY= os.environ.get("SECRET_KEY")
     S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
 
     def __init__(self):
@@ -23,7 +26,10 @@ class WhatsAppWrapper:
             "Content-Type": "application/json",
         }
         
-        self.s3Client = boto3.client('s3')
+        self.s3Client = boto3.client('s3', 
+                                    aws_access_key_id=self.ACCESS_KEY,
+                                    aws_secret_access_key=self.SECRET_KEY
+                                     )
 
     def send_template_message(self, template_name, language_code, phone_number):
         payload = json.dumps({
@@ -66,18 +72,32 @@ class WhatsAppWrapper:
         body_data = body["entry"][0]["changes"][0]["value"]
         data = "not a message"
         if "messages" in body_data:
-            
-            if (body_data["messages"][0]["type"] == "text"):
-                #data: Whatsapp_txt_msg = {
-                data = {
-                    "msg_type": "txt",
+            data = {
+                    "msg_type": "",
                     "business_phone_number": body_data["metadata"]["display_phone_number"],
                     "business_number_id": body_data["metadata"]["phone_number_id"],
                     "client_number": body_data["contacts"][0]["wa_id"],
                     "client_profile_name": body_data["contacts"][0]["profile"]["name"],
-                    "message" : body_data["messages"][0]["text"]["body"],
-                    "timestamp": body_data["messages"][0]["timestamp"]
+                    "assigned_agent": "", 
+                    "timestamp": body_data["messages"][0]["timestamp"],
+                    "sender_is_business": False
                 }
+
+
+            
+            if (body_data["messages"][0]["type"] == "text"):
+                data["msg_type"] = "txt"
+                data["message"] = body_data["messages"][0]["text"]["body"]
+                #data: Whatsapp_txt_msg = {
+                # data = {
+                #     "msg_type": "txt",
+                #     "business_phone_number": body_data["metadata"]["display_phone_number"],
+                #     "business_number_id": body_data["metadata"]["phone_number_id"],
+                #     "client_number": body_data["contacts"][0]["wa_id"],
+                #     "client_profile_name": body_data["contacts"][0]["profile"]["name"], 
+                #     "timestamp": body_data["messages"][0]["timestamp"],
+                #     "message" : body_data["messages"][0]["text"]["body"],
+                # }
 
             if (body_data["messages"][0]["type"] == "image"):
                 
@@ -104,19 +124,22 @@ class WhatsAppWrapper:
                 if("caption" in body_data["messages"][0]["image"]):
                     caption = body_data["messages"][0]["image"]["caption"]
 
+                data["msg_type"] = "img"
+                data["caption"] = caption
+                data["image_url"] = image_url
 
-                #data: Whatsapp_img_msg = {
-                data = {
-                    "msg_type": "img",
-                    "business_phone_number": body_data["metadata"]["display_phone_number"],
-                    "business_number_id": body_data["metadata"]["phone_number_id"],
-                    "client_number": body_data["contacts"][0]["wa_id"],
-                    "client_profile_name": body_data["contacts"][0]["profile"]["name"],
-                    "caption" : caption,
-                    "image_url": image_url,
-                    "timestamp": body_data["messages"][0]["timestamp"]
+                # data = {
+                #     "msg_type": "img",
+                #     "business_phone_number": body_data["metadata"]["display_phone_number"],
+                #     "business_number_id": body_data["metadata"]["phone_number_id"],
+                #     "client_number": body_data["contacts"][0]["wa_id"],
+                #     "client_profile_name": body_data["contacts"][0]["profile"]["name"],
+                #     "timestamp": body_data["messages"][0]["timestamp"],
+                #     "caption" : caption,
+                #     "image_url": image_url,
+                    
 
-                }
+                # }
 
         
         
