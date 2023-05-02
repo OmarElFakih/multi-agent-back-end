@@ -1,6 +1,7 @@
 from pymongo import mongo_client
 from mongo.mongo_doc_types import Converstaion_doc
 from whatsapp.whatsapp_data_types import Whatsapp_msg
+from bson import json_util
 import re
 import datetime
 
@@ -78,6 +79,33 @@ class MongoWrapper:
 
         return metrics
     
+
+    def get_history(self, business_phone_number_id: str, assigned_agent="", client_name="", date=""):
+        query = {"business_phone_number_id": business_phone_number_id}
+
+        if(assigned_agent != ""):
+            query["assigned_agent"] = assigned_agent
+
+        if(client_name != ""):
+            query["client_name"] = client_name
+
+        docs = self.conversations.find(query)
+
+        filter_docs = []
+
+    
+
+        for document in docs:
+            doc_date = datetime.datetime.fromtimestamp(int(document["date"]))
+
+            if (self.string_date(doc_date) == date or date == ""):
+                filter_docs.append(document)
+        
+        
+        return json_util.dumps(filter_docs)
+        
+        
+                
 
 
     def find_conversation(self, client_number: str, business_phone_number_id: str):
