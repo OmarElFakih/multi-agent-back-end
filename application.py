@@ -102,14 +102,25 @@ async def get_metrics(request):
     return web.Response(text=json.dumps(metrics_data))
     #return web.Response(text=req_data["business_phone_number_id"])
 
-@routes.post('/history')
+@routes.get('/history')
 async def get_history(request):
-    req_data = await request.json()
-    print(req_data)
-    # history = mgClient.get_history(req_data["business_phone_number_id"], req_data["assigned_agent"], req_data["client_name"], req_data["date"])
+    # req_data = await request.json()
+    # print(req_data)
+    params = {
+        "business_phone_number_id": request.rel_url.query["business_phone_number_id"],
+        "assigned_agent": request.rel_url.query["assigned_agent"],
+        "client_name": request.rel_url.query["client_name"],
+        "date": request.rel_url.query["date"]
+    }
 
-    history = {"key1": "value1"}
-    print(history)
+
+    
+    print(params)
+
+    history = mgClient.get_history(params["business_phone_number_id"], params["assigned_agent"], params["client_name"], params["date"])
+
+    #history = params
+    # print(history)
     jhistory = json.dumps(history)
     return web.Response(text=jhistory)
 

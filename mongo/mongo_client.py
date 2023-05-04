@@ -14,8 +14,8 @@ class MongoWrapper:
     def __init__(self, connection_string, database_name):
         self.client = mongo_client.MongoClient(connection_string)
         self.db = self.client.get_database(database_name)
-        #self.conversations = self.db.conversations
-        self.conversations = self.db.testing_conversations
+        self.conversations = self.db.conversations
+        #self.conversations = self.db.testing_conversations
         
     def string_date(self, datetime_obj: datetime.datetime):
         return datetime_obj.strftime("%d-%m-%Y")
