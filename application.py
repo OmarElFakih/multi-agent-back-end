@@ -1,6 +1,7 @@
 import os
 import time
 import aiohttp
+import aiohttp_cors
 from whatsapp.whatsapp_client import WhatsAppWrapper
 # from whatsapp.whatsapp_data_types import Whatsapp_msg_data
 from mongo.mongo_client import MongoWrapper
@@ -30,6 +31,19 @@ class Application(web.Application):
         super().__init__()
 
     def run(self):
+        cors_defaults = {
+            '*': aiohttp_cors.ResourceOptions(
+                max_age = 3600,
+                allow_methods = '*',
+                allow_headers = '*',
+                expose_headers = '*',
+                allow_credentials = True,
+            )
+        }
+        cors = aiohttp_cors.setup(self, defaults=cors_defaults)
+
+        for route in self.router.routes():
+            cors.add(route)
         return web.run_app(self, port=8000)
 
 
@@ -88,6 +102,27 @@ async def get_metrics(request):
     return web.Response(text=json.dumps(metrics_data))
     #return web.Response(text=req_data["business_phone_number_id"])
 
+@routes.get('/history')
+async def get_history(request):
+    # req_data = await request.json()
+    # print(req_data)
+    params = {
+        "business_phone_number_id": request.rel_url.query["business_phone_number_id"],
+        "assigned_agent": request.rel_url.query["assigned_agent"],
+        "client_name": request.rel_url.query["client_name"],
+        "date": request.rel_url.query["date"]
+    }
+
+
+    
+    print(params)
+
+    history = mgClient.get_history(params["business_phone_number_id"], params["assigned_agent"], params["client_name"], params["date"])
+
+    #history = params
+    # print(history)
+    jhistory = json.dumps(history)
+    return web.Response(text=jhistory)
 
 
 @routes.get('/ws')
