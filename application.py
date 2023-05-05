@@ -121,8 +121,8 @@ async def get_history(request):
 
     #history = params
     # print(history)
-    jhistory = json.dumps(history)
-    return web.Response(text=jhistory)
+    #jhistory = json.dumps(history)
+    return web.Response(text=history)
 
 
 @routes.get('/ws')
