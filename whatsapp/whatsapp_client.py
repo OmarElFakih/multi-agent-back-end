@@ -87,7 +87,7 @@ class WhatsAppWrapper:
             
             if (body_data["messages"][0]["type"] == "text"):
                 data["msg_type"] = "txt"
-                data["message"] = body_data["messages"][0]["text"]["body"]
+                data["body"] = body_data["messages"][0]["text"]["body"]
                 #data: Whatsapp_txt_msg = {
                 # data = {
                 #     "msg_type": "txt",
