@@ -16,20 +16,22 @@ class WhatsAppWrapper:
     API_TOKEN = os.environ.get("WHATSAPP_API_TOKEN")
     NUMBER_ID = os.environ.get("WHATSAPP_NUMBER_ID")
 
-    ACCESS_KEY= os.environ.get("ACCESS_KEY")
-    SECRET_KEY= os.environ.get("SECRET_KEY")
-    S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
+    # ACCESS_KEY= os.environ.get("ACCESS_KEY")
+    # SECRET_KEY= os.environ.get("SECRET_KEY")
+    # S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
 
-    def __init__(self):
+    def __init__(self, s3Client):
         self.headers = {
             "Authorization": f"Bearer {self.API_TOKEN}",
             "Content-Type": "application/json",
         }
+
+        self.s3Client = s3Client
         
-        self.s3Client = boto3.client('s3', 
-                                    aws_access_key_id=self.ACCESS_KEY,
-                                    aws_secret_access_key=self.SECRET_KEY
-                                     )
+        # self.s3Client = boto3.client('s3', 
+        #                             aws_access_key_id=self.ACCESS_KEY,
+        #                             aws_secret_access_key=self.SECRET_KEY
+        #                              )
 
     def send_template_message(self, template_name, language_code, phone_number):
         payload = json.dumps({
@@ -109,15 +111,18 @@ class WhatsAppWrapper:
 
                 response_ii = requests.request("GET", f"{req_body['url']}/", headers=self.headers)
 
-                with open(f'{media_id}.jpg', "wb") as f:
-                    f.write(response_ii.content)
+                image_url = self.s3Client.upload_image(media_id, response_ii.content)
                 
-                self.s3Client.upload_file(f"{media_id}.jpg", self.S3_BUCKET_NAME, f"images/{media_id}.jpg")
 
-                image_url = f"https://{self.S3_BUCKET_NAME}.s3.amazonaws.com/images/{media_id}.jpg"
+                # with open(f'{media_id}.jpg', "wb") as f:
+                #     f.write(response_ii.content)
+                
+                # self.s3Client.upload_file(f"{media_id}.jpg", self.S3_BUCKET_NAME, f"images/{media_id}.jpg")
 
-                if os.path.exists(f"{media_id}.jpg"):
-                    os.remove(f"{media_id}.jpg")
+                # image_url = f"https://{self.S3_BUCKET_NAME}.s3.amazonaws.com/images/{media_id}.jpg"
+
+                # if os.path.exists(f"{media_id}.jpg"):
+                #     os.remove(f"{media_id}.jpg")
 
                 caption = ""
                 

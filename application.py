@@ -5,6 +5,7 @@ import aiohttp_cors
 from whatsapp.whatsapp_client import WhatsAppWrapper
 # from whatsapp.whatsapp_data_types import Whatsapp_msg_data
 from mongo.mongo_client import MongoWrapper
+from s3.s3Client import S3Wrapper
 from mongo.mongo_doc_types import Txt_msg_doc, Img_msg_doc, Notification_doc
 from dotenv import load_dotenv
 import json
@@ -23,7 +24,8 @@ VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN")
 MONGODB_ATLAS_CONNECTION_STRING = os.environ.get("MONGODB_ATLAS_CONNECTION_STRING")
 MONGODB_ATLAS_DATABASE_NAME = os.environ.get("MONGODB_ATLAS_DATABASE_NAME")
 
-wsClient = WhatsAppWrapper()
+s3Client = S3Wrapper()
+wsClient = WhatsAppWrapper(s3Client)
 mgClient = MongoWrapper(MONGODB_ATLAS_CONNECTION_STRING, MONGODB_ATLAS_DATABASE_NAME)
 
 class Application(web.Application):
