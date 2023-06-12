@@ -47,10 +47,12 @@ class Application(web.Application):
         return web.run_app(self, port=8000)
 
 
-async def send_agents(message, agent_id=""):
+async def send_agents(message, target_agent="", sender_agent=""):
     for agent in all_agents:
         if agent["business_number_id"] == message["business_number_id"]:
-            if((agent["role"] == "admin") or (agent["id"] == agent_id) or (agent_id == "")):
+            if(((agent["role"] == "admin") or (agent["id"] == target_agent) or (target_agent == "")) and (agent["id"] != sender_agent)):
+                print(f"sender_agent: {sender_agent}")
+                print(f"agent_id: {agent['id']}")
                 await agent["connection"].send_str(json.dumps(message))
 
 @routes.get('/')
@@ -179,7 +181,7 @@ async def websocket_handler(request):
                             }
 
                             if("body" in message):
-                                stored_message["message"] = message["body"]
+                                stored_message["body"] = message["body"]
                             
                             if("image_url" in message):
                                 stored_message["caption"] = message["caption"]
@@ -200,14 +202,14 @@ async def websocket_handler(request):
                     #create message dictionary for storage
                     msg_data = {
                         "msg_type": "txt",
-                        "message": data["message"],
+                        "body": data["body"],
                         "timestamp": data["timestamp"],
                     }
 
                     #check if there is no agent assigned to the target conversation
                     if(target_conversation["assigned_agent"] == "none"):
                         print(f"no assigned agent in conversation, {agent['id']} will be assigned")
-                        wsClient.send_message(data["message"], data["client_number"], agent["business_number_id"])
+                        wsClient.send_message(data["body"], data["client_number"], agent["business_number_id"])
                         mgClient.insert_message(msg_data, agent["id"], sender_is_business=True, conversation_id=target_conversation["_id"])
                         mgClient.update_values(data["client_number"], agent["business_number_id"], {"status": "ongoing", "assigned_agent": agent["id"]})
 
@@ -220,16 +222,17 @@ async def websocket_handler(request):
                             "isNoti": True
                         }
 
-                        await send_agents(data, agent_id="admins_only")
                         await send_agents(noti_data)
+                        await send_agents(data, target_agent="admins_only", sender_agent=agent["id"])
+                        
                         
                     
 
                     #if there is an agent assigned to the target conversation, check if said agent is the one sending the message
                     if(target_conversation["assigned_agent"] == agent["id"]):
                         print(f" {agent['id']} is the assigned agent to this conversation")
-                        wsClient.send_message(data["message"], data["client_number"], agent["business_number_id"])
-                        await send_agents(data, agent_id="admins_only")
+                        wsClient.send_message(data["body"], data["client_number"], agent["business_number_id"])
+                        await send_agents(data, target_agent="admins_only", sender_agent=agent["id"])
                         mgClient.insert_message(msg_data, agent["id"], sender_is_business=True, conversation_id=target_conversation["_id"])
 
                     #prevent message from being delivered if the assigned agent is different to the one trying to send the message

@@ -198,7 +198,7 @@ class MongoWrapper:
         }
 
         if (message_data["msg_type"] == "txt"):
-            msg_doc["body"] = message_data["message"]
+            msg_doc["body"] = message_data["body"]
             msg_doc["msg_type"] = "txt"
 
         if (message_data["msg_type"] == "img"):
